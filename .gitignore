@@ -1,0 +1,10 @@
+# Ignora arquivos compilados do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignora diretórios de cache específicos do Python
+*.egg-info/
+dist/
+build/
