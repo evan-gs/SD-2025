@@ -30,8 +30,8 @@ process = {
 num_process = len(process)
 
 def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
-    print(f"-> Pacote recebido do <<P{msg.src_process}>>")
-    print(f"\n->tipo:{msg.tipe}\n->id:{msg.message_id}\n->src_process:{msg.src_process}\n->dst_process:{msg.dst_process}\n->clock:{clock[0]}\n->timestamp:{msg.timestamp}\n->ack_timestamp:{msg.ack_timestamp}")
+    #print(f"-> Pacote recebido do <<P{msg.src_process}>>")
+    #print(f"\n->tipo:{msg.tipe}\n->id:{msg.message_id}\n->src_process:{msg.src_process}\n->dst_process:{msg.dst_process}\n->clock:{clock[0]}\n->timestamp:{msg.timestamp}\n->ack_timestamp:{msg.ack_timestamp}")
     
     last_message_id[0] = max(last_message_id[0], msg.message_id)
     
@@ -40,8 +40,8 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
         key = (msg.message_id, msg.dst_process)
         pending_ack = ack_queue.pop(key, set())
         pending_ack.add(id)
-        print(f"key:{key}")
-        print(f"pending_ack:{pending_ack}")
+        #print(f"key:{key}")
+        #print(f"pending_ack:{pending_ack}")
         msg_queue.append((msg.timestamp, msg.message_id, msg.src_process, msg.dst_process, msg.text, pending_ack))
         msg_queue.sort()
         for pid, (host, port) in process.items():
@@ -53,15 +53,14 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
     elif msg.tipe == 1:
         clock[0] = max(clock[0], msg.timestamp) + 1
         key = (msg.message_id, msg.dst_process)
-        print(f"\n->chave do ack: {key}\n")
+        #print(f"\n->chave do ack: {key}\n")
         if len(msg_queue) > 0:
             for i, (timestamp, message_id, src, dst, text, acks) in enumerate(msg_queue):
-                print(f"-> chave do for: {(last_message_id[0], dst)}")
-                print((message_id, dst) == key)
+                #print(f"-> chave do for: {(last_message_id[0], dst)}")
                 if (message_id, dst) == key:
                     acks.add(msg.src_process)  
                     msg_queue[i] = (timestamp, message_id, src, dst, text, acks)
-                    print(f"->src:{msg.src_process}\n->current_msq_queue:{msg_queue[i]}")
+                    #print(f"->src:{msg.src_process}\n->current_msq_queue:{msg_queue[i]}")
                     break
                 else:
                     ack_queue.setdefault(key, set()).add(msg.src_process)
