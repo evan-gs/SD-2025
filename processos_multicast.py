@@ -54,14 +54,17 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
         clock[0] = max(clock[0], msg.timestamp) + 1
         key = (msg.message_id, msg.dst_process)
         print(f"\n->chave do ack: {key}\n")
-        for i, (message_id,timestamp, src, dst, text, acks) in enumerate(msg_queue):
-            print(f"-> chave do for: {(id, dst)}")
-            if (message_id, dst) == key:
-                acks.add(msg.src_process)  
-                msg_queue[i] = (message_id, timestamp, src, dst, text, acks)
-                break
-            else:
-                ack_queue.setdefault(key, set()).add(msg.src_process)
+        if len(msg_queue) > 0:
+            for i, (message_id,timestamp, src, dst, text, acks) in enumerate(msg_queue):
+                print(f"-> chave do for: {(id, dst)}")
+                if (message_id, dst) == key:
+                    acks.add(msg.src_process)  
+                    msg_queue[i] = (message_id, timestamp, src, dst, text, acks)
+                    break
+                else:
+                    ack_queue.setdefault(key, set()).add(msg.src_process)
+        else:
+            ack_queue.setdefault(key, set()).add(msg.src_process)
             
     while len(msg_queue) > 0:
         print(f"-> Fila atual em <<P{id}>>: {[ (message_id, timestamp, src, dst, text, list(acks)) for message_id, timestamp, src, dst, text, acks in msg_queue ]}")
