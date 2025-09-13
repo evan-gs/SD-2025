@@ -36,7 +36,9 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
     last_message_id[0] = max(last_message_id[0], msg.message_id)
     
     if msg.tipe == 0:
-        clock[0] = max(clock[0], msg.timestamp) + 1
+        if msg.timestamp > clock[0]:
+            clock[0] = msg.timestamp + 1
+        clock[0] += id
         key = (msg.message_id, msg.dst_process)
         pending_ack = ack_queue.pop(key, set())
         pending_ack.add(id)
@@ -46,12 +48,14 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
         msg_queue.sort()
         for pid, (host, port) in process.items():
             if pid == id:
+                clock[0] += id
                 continue
             ack = message(tipe=1, message_id=msg.message_id, timestamp=clock[0], src_process=id, dst_process=pid, ack_timestamp=msg.timestamp)
             sock.sendto(bytes(ack), (host, port))
             
     elif msg.tipe == 1:
-        clock[0] = max(clock[0], msg.timestamp) + 1
+        if msg.timestamp > clock[0]:
+            clock[0] = msg.timestamp + 1
         key = (msg.message_id, msg.dst_process)
         #print(f"\n->chave do ack: {key}\n")
         if len(msg_queue) > 0:
