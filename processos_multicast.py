@@ -43,8 +43,20 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
         pending_ack.add(id)
         #print(f"key:{key}")
         #print(f"pending_ack:{pending_ack}")
-        msg_queue.append((clock[0], msg.message_id, msg.src_process, msg.dst_process, msg.text, pending_ack))
-        msg_queue.sort(key=lambda x: (x[0], x[1], x[2]))
+        
+        updated = False
+        for i, (timestamp, message_id, src, dst, text, acks) in enumerate(msg_queue):
+            if (message_id, dst) == key:
+                acks.update(pending_ack) 
+                msg_queue[i] = (timestamp, message_id, msg.src_process, dst, msg.text, acks)
+                updated = True
+                break
+
+        if not updated:
+            msg_queue.append((clock[0], msg.message_id, msg.src_process, msg.dst_process, msg.text, pending_ack))
+        
+        msg_queue.sort(key=lambda x: (x[0], x[1]))
+        
         for pid, (host, port) in process.items():
             if pid == id:
                 clock[0] += id
@@ -57,18 +69,31 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
         #print(f"\n-> clock do recebimento do ack de <<P{msg.src_process}>> da mensagem {msg.message_id}: {clock[0]}")
         key = (msg.message_id, msg.dst_process)
         #print(f"\n->chave do ack: {key}\n")
+        
+        found_message = False
         if len(msg_queue) > 0:
             for i, (timestamp, message_id, src, dst, text, acks) in enumerate(msg_queue):
                 #print(f"-> chave do for: {(last_message_id[0], dst)}")
                 if (message_id, dst) == key:
                     acks.add(msg.src_process)  
                     msg_queue[i] = (timestamp, message_id, src, dst, text, acks)
+                    found_message = True
                     #print(f"->src:{msg.src_process}\n->current_msq_queue:{msg_queue[i]}")
                     break
-                else:
-                    ack_queue.setdefault(key, set()).add(msg.src_process)
-        else:
+                
+        if not found_message:
             ack_queue.setdefault(key, set()).add(msg.src_process)
+            
+            placeholder_exist = False
+            for _, message_id, _, dst, _, _ in msg_queue:
+                if (message_id, dst) == key:
+                    placeholder_exist = True
+                    break
+
+            if not placeholder_exist:
+                current_acks = ack_queue[key]
+                msg_queue.append((clock[0], msg.message_id, None, id, None, current_acks))
+                msg_queue.sort(key=lambda x: (x[0], x[1]))
             
     while len(msg_queue) > 0:
         print(f"-> Fila atual em <<P{id}>>: {[ (timestamp, message_id, src, dst, text, list(acks)) for timestamp, message_id, src, dst, text, acks in msg_queue ]}")
