@@ -34,28 +34,27 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
     #print(f"\n->tipo:{msg.tipe}\n->id:{msg.message_id}\n->src_process:{msg.src_process}\n->dst_process:{msg.dst_process}\n->clock:{clock[0]}\n->timestamp:{msg.timestamp}\n->ack_timestamp:{msg.ack_timestamp}")
     
     last_message_id[0] = max(last_message_id[0], msg.message_id)
+    clock[0] = max(clock[0], msg.timestamp) + 1
     
     if msg.tipe == 0:
-        if msg.timestamp > clock[0]:
-            clock[0] = msg.timestamp + 1
-        clock[0] += id
+        #print(f"\n-> clock do recebimento da mensagem {msg.message_id}: {clock[0]}")
         key = (msg.message_id, msg.dst_process)
         pending_ack = ack_queue.pop(key, set())
         pending_ack.add(id)
         #print(f"key:{key}")
         #print(f"pending_ack:{pending_ack}")
-        msg_queue.append((msg.timestamp, msg.message_id, msg.src_process, msg.dst_process, msg.text, pending_ack))
-        msg_queue.sort()
+        msg_queue.append((clock[0], msg.message_id, msg.src_process, msg.dst_process, msg.text, pending_ack))
+        msg_queue.sort(key=lambda x: (x[0], x[1], x[2]))
         for pid, (host, port) in process.items():
             if pid == id:
                 clock[0] += id
+                #print(f"\n-> clock do recebimento do ack de <<P{id}>> da mensagem {msg.message_id}: {clock[0]}")
                 continue
             ack = message(tipe=1, message_id=msg.message_id, timestamp=clock[0], src_process=id, dst_process=pid, ack_timestamp=msg.timestamp)
             sock.sendto(bytes(ack), (host, port))
             
     elif msg.tipe == 1:
-        if msg.timestamp > clock[0]:
-            clock[0] = msg.timestamp + 1
+        #print(f"\n-> clock do recebimento do ack de <<P{msg.src_process}>> da mensagem {msg.message_id}: {clock[0]}")
         key = (msg.message_id, msg.dst_process)
         #print(f"\n->chave do ack: {key}\n")
         if len(msg_queue) > 0:
@@ -93,10 +92,10 @@ def tr_send_msg(id, clock, latency, last_message_id):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     while True:
         text = input("")
-        clock[0] += id
+        clock[0] += 1
         last_message_id[0] += 1
         message_id = last_message_id[0]
-        print(f"-> clock: {clock[0]}")
+        #print(f"-> clock do envio da mensagem {message_id}: {clock[0]}")
         for pid, (host, port) in process.items():
             pkt = message(tipe=0, message_id=message_id, timestamp=clock[0], src_process=id, dst_process=pid, text=text)
             sock.sendto(bytes(pkt), (host, port))
