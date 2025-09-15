@@ -3,10 +3,12 @@ Sistema de multicast com ordenação total entre múltiplos processos.
 
 ### Pré-requisitos
 Python 3.11.x
+
 Scapy (pip install scapy)
 
 ### Como Executar
 Execução Básica (4 processos)
+
 Abra 4 terminais e execute em cada um:
 
 ```bash
