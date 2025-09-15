@@ -29,103 +29,101 @@ process = {
 
 num_process = len(process)
 
-def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock, lock):
-    with lock:
-        #print(f"-> Pacote recebido do <<P{msg.src_process}>>")
-        #print(f"\n->tipo:{msg.tipe}\n->id:{msg.message_id}\n->src_process:{msg.src_process}\n->dst_process:{msg.dst_process}\n->clock:{clock[0]}\n->timestamp:{msg.timestamp}\n->ack_timestamp:{msg.ack_timestamp}")
+def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
+    #print(f"-> Pacote recebido do <<P{msg.src_process}>>")
+    #print(f"\n->tipo:{msg.tipe}\n->id:{msg.message_id}\n->src_process:{msg.src_process}\n->dst_process:{msg.dst_process}\n->clock:{clock[0]}\n->timestamp:{msg.timestamp}\n->ack_timestamp:{msg.ack_timestamp}")
+    
+    last_message_id[0] = max(last_message_id[0], msg.message_id)
+    clock[0] = max(clock[0], msg.timestamp) + 1
+    
+    if msg.tipe == 0 and msg.dst_process == id:
+        #print(f"\n-> clock do recebimento da mensagem {msg.message_id}: {clock[0]}")
+        key = (msg.message_id, msg.dst_process)
+        pending_ack = ack_queue.pop(key, set())
+        pending_ack.add(id)
+        #print(f"key:{key}")
+        #print(f"pending_ack:{pending_ack}")
         
-        last_message_id[0] = max(last_message_id[0], msg.message_id)
-        clock[0] = max(clock[0], msg.timestamp) + 1
+        updated = False
+        for i, (timestamp, message_id, src, dst, text, acks) in enumerate(msg_queue):
+            if (message_id, dst) == key:
+                acks.update(pending_ack) 
+                msg_queue[i] = (timestamp, message_id, msg.src_process, dst, msg.text, acks)
+                updated = True
+                break
+
+        if not updated:
+            msg_queue.append((clock[0], msg.message_id, msg.src_process, msg.dst_process, msg.text, pending_ack))
         
-        if msg.tipe == 0 and msg.dst_process == id:
-            #print(f"\n-> clock do recebimento da mensagem {msg.message_id}: {clock[0]}")
-            key = (msg.message_id, msg.dst_process)
-            pending_ack = ack_queue.pop(key, set())
-            pending_ack.add(id)
-            #print(f"key:{key}")
-            #print(f"pending_ack:{pending_ack}")
+        msg_queue.sort(key=lambda x: (x[0], x[1]))
+        
+        for pid, (host, port) in process.items():
+            if pid == id:
+                #print(f"\n-> clock do recebimento do ack de <<P{id}>> da mensagem {msg.message_id}: {clock[0]}")
+                continue
+            ack = message(tipe=1, message_id=msg.message_id, timestamp=clock[0], src_process=id, dst_process=pid, ack_timestamp=msg.timestamp)
+            sock.sendto(bytes(ack), (host, port))
             
-            updated = False
+    elif msg.tipe == 1 and msg.dst_process == id:
+        #print(f"\n-> clock do recebimento do ack de <<P{msg.src_process}>> da mensagem {msg.message_id}: {clock[0]}")
+        key = (msg.message_id, msg.dst_process)
+        #print(f"\n->chave do ack: {key}\n")
+        
+        found_message = False
+        if len(msg_queue) > 0:
             for i, (timestamp, message_id, src, dst, text, acks) in enumerate(msg_queue):
+                #print(f"-> chave do for: {(last_message_id[0], dst)}")
                 if (message_id, dst) == key:
-                    acks.update(pending_ack) 
-                    msg_queue[i] = (timestamp, message_id, msg.src_process, dst, msg.text, acks)
-                    updated = True
+                    acks.add(msg.src_process)  
+                    msg_queue[i] = (timestamp, message_id, src, dst, text, acks)
+                    found_message = True
+                    #print(f"->src:{msg.src_process}\n->current_msq_queue:{msg_queue[i]}")
+                    break
+                
+        if not found_message:
+            ack_queue.setdefault(key, set()).add(msg.src_process)
+            
+            placeholder_exist = False
+            for _, message_id, _, dst, _, _ in msg_queue:
+                if (message_id, dst) == key:
+                    placeholder_exist = True
                     break
 
-            if not updated:
-                msg_queue.append((clock[0], msg.message_id, msg.src_process, msg.dst_process, msg.text, pending_ack))
+            if not placeholder_exist:
+                current_acks = ack_queue[key]
+                msg_queue.append((clock[0], msg.message_id, None, id, None, current_acks))
+                msg_queue.sort(key=lambda x: (x[0], x[1]))
             
-            msg_queue.sort(key=lambda x: (x[0], x[1]))
-            
-            for pid, (host, port) in process.items():
-                if pid == id:
-                    #print(f"\n-> clock do recebimento do ack de <<P{id}>> da mensagem {msg.message_id}: {clock[0]}")
-                    continue
-                ack = message(tipe=1, message_id=msg.message_id, timestamp=clock[0], src_process=id, dst_process=pid, ack_timestamp=msg.timestamp)
-                sock.sendto(bytes(ack), (host, port))
-                
-        elif msg.tipe == 1 and msg.dst_process == id:
-            #print(f"\n-> clock do recebimento do ack de <<P{msg.src_process}>> da mensagem {msg.message_id}: {clock[0]}")
-            key = (msg.message_id, msg.dst_process)
-            #print(f"\n->chave do ack: {key}\n")
-            
-            found_message = False
-            if len(msg_queue) > 0:
-                for i, (timestamp, message_id, src, dst, text, acks) in enumerate(msg_queue):
-                    #print(f"-> chave do for: {(last_message_id[0], dst)}")
-                    if (message_id, dst) == key:
-                        acks.add(msg.src_process)  
-                        msg_queue[i] = (timestamp, message_id, src, dst, text, acks)
-                        found_message = True
-                        #print(f"->src:{msg.src_process}\n->current_msq_queue:{msg_queue[i]}")
-                        break
-                    
-            if not found_message:
-                ack_queue.setdefault(key, set()).add(msg.src_process)
-                
-                placeholder_exist = False
-                for _, message_id, _, dst, _, _ in msg_queue:
-                    if (message_id, dst) == key:
-                        placeholder_exist = True
-                        break
+    while len(msg_queue) > 0:
+        print(f"-> Fila atual em <<P{id}>>: {[ (timestamp, message_id, src, dst, text, list(acks)) for timestamp, message_id, src, dst, text, acks in msg_queue ]}")
+        timestamp, message_id, src, dst, text, acks = msg_queue[0]
+        if len(acks) == num_process:  
+            print(f"-> Mensagem entrege em <<P{id}>>: \"{text}\" de <<P{src}>>")
+            msg_queue.pop(0)
+        else:
+            break        
 
-                if not placeholder_exist:
-                    current_acks = ack_queue[key]
-                    msg_queue.append((clock[0], msg.message_id, None, id, None, current_acks))
-                    msg_queue.sort(key=lambda x: (x[0], x[1]))
-                
-        while len(msg_queue) > 0:
-            print(f"-> Fila atual em <<P{id}>>: {[ (timestamp, message_id, src, dst, text, list(acks)) for timestamp, message_id, src, dst, text, acks in msg_queue ]}")
-            timestamp, message_id, src, dst, text, acks = msg_queue[0]
-            if len(acks) == num_process:  
-                print(f"-> Mensagem entrege em <<P{id}>>: \"{text}\" de <<P{src}>>")
-                msg_queue.pop(0)
-            else:
-                break        
-
-def tr_receive_msg(id, port, clock, msg_queue, ack_queue, last_message_id, lock):
+def tr_receive_msg(id, port, clock, msg_queue, ack_queue, last_message_id):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", port))
     while True:
         data, addr = sock.recvfrom(4096)
         pkt = message(data)
-        deal_with_msg(pkt, id, clock, msg_queue, ack_queue, last_message_id, sock, lock)
+        deal_with_msg(pkt, id, clock, msg_queue, ack_queue, last_message_id, sock)
 
 
-def tr_send_msg(id, clock, latency, last_message_id, lock):
+def tr_send_msg(id, clock, latency, last_message_id):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     while True:
         text = input("")
-        with lock:
-            clock[0] += 1
-            last_message_id[0] += 1
-            message_id = last_message_id[0]
-            #print(f"-> clock do envio da mensagem {message_id}: {clock[0]}")
-            for pid, (host, port) in process.items():
-                pkt = message(tipe=0, message_id=message_id, timestamp=clock[0], src_process=id, dst_process=pid, text=text)
-                sock.sendto(bytes(pkt), (host, port))
-                time.sleep(latency)
+        clock[0] += 1
+        last_message_id[0] += 1
+        message_id = last_message_id[0]
+        #print(f"-> clock do envio da mensagem {message_id}: {clock[0]}")
+        for pid, (host, port) in process.items():
+            pkt = message(tipe=0, message_id=message_id, timestamp=clock[0], src_process=id, dst_process=pid, text=text)
+            sock.sendto(bytes(pkt), (host, port))
+            time.sleep(latency)
             
         
         
@@ -138,8 +136,6 @@ if __name__ == "__main__":
     msg_queue = []
     ack_queue = {}
     
-    lock = threading.Lock()
-    
     if len(sys.argv) > 2:
         latency = float(sys.argv[2])
     else:
@@ -148,8 +144,8 @@ if __name__ == "__main__":
     print(f"Processo: <<P{id}>> rodando em {host}:{port}")
     
     # uma thread para tratar o recebimento dos pacotes
-    th = threading.Thread(target=tr_receive_msg, args=(id, port, clock, msg_queue, ack_queue, last_message_id, lock), daemon=True)
+    th = threading.Thread(target=tr_receive_msg, args=(id, port, clock, msg_queue, ack_queue, last_message_id), daemon=True)
     th.start()
     
     # outra thread para tratar o envio dos pacotes
-    tr_send_msg(id, clock, latency, last_message_id, lock)
+    tr_send_msg(id, clock, latency, last_message_id)
