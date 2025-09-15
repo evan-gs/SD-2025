@@ -98,7 +98,7 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
         print(f"-> Fila atual em <<P{id}>>: {[ (timestamp, message_id, src, dst, text, list(acks)) for timestamp, message_id, src, dst, text, acks in msg_queue ]}")
         timestamp, message_id, src, dst, text, acks = msg_queue[0]
         if len(acks) == num_process:  
-            print(f"-> Mensagem entrege em <<P{id}>>: \"{text}\" de <<P{src}>>")
+            print(f"-> Mensagem {message_id} entrege em <<P{id}>>: \"{text}\" de <<P{src}>>")
             msg_queue.pop(0)
         else:
             break        
