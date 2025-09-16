@@ -27,6 +27,7 @@ process = {
     4: ("127.0.0.1", 65004)
 }
 
+ready = False
 num_process = len(process)
 
 def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
@@ -95,7 +96,8 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
                 msg_queue.sort(key=lambda x: (x[0], x[1]))
     
     elif msg.tipe == 2 and msg.dst_process == id:
-        ready = True
+        global ready
+        ready += True
         print("Comecando...")
         print("")
         print("")
@@ -132,10 +134,10 @@ def tr_send_msg(id, clock, latency, last_message_id):
             sock.sendto(bytes(pkt), (host, port))
         time.sleep(0.1)
     
-    print("saimo IRRAAAA")
-    print("")
+    #print("saimo IRRAAAA")
+    #print("")
 
-    while clock[0] < 21:
+    while clock[0] < 100:
         sent_counter[0] += 1
         text = f"Msg {sent_counter} do P {id}"
         clock[0] += 1
@@ -153,7 +155,6 @@ if __name__ == "__main__":
     id = int(sys.argv[1])
     host, port = process[id]
 
-    ready = False
     clock = [0] 
     last_message_id = [0] 
     sent_counter = [0] 
