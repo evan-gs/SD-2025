@@ -1,3 +1,5 @@
+#Projeto feito por Gabriel Evangelista Gonçalves da Silva - RA 802791 e Gabriel Andrade - RA 815407
+
 #!/usr/bin/env python3
 
 from scapy.all import IP, UDP, send, sniff, Packet, ByteEnumField, IntField, StrField
