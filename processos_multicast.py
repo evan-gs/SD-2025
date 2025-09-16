@@ -1,3 +1,5 @@
+#Projeto feito por Gabriel Evangelista Gonçalves da Silva - RA 802791 e Gabriel Andrade - RA ??????
+
 #!/usr/bin/env python3
 
 from scapy.all import IP, UDP, send, sniff, Packet, ByteEnumField, IntField, StrField
@@ -27,7 +29,6 @@ process = {
     4: ("127.0.0.1", 65004)
 }
 
-ready = False
 num_process = len(process)
 
 def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
@@ -97,10 +98,16 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
     
     elif msg.tipe == 2 and msg.dst_process == id:
         global ready
-        ready += True
+        ready = True
         print("Comecando...")
         print("")
         print("")
+
+    elif msg.tipe == 3 and msg.dst_process == id:
+        global done
+        done = True
+        print("")
+        print("Finalizando!")
             
     while len(msg_queue) > 0:
         print("")
@@ -108,6 +115,7 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
         timestamp, message_id, src, dst, text, acks = msg_queue[0]
         if len(acks) == num_process:  
             print(f"\n!!! Mensagem {message_id} entrege em <<P{id}>>: \"{text}\" de <<P{src}>>")
+            final_list.append((text))
             msg_queue.pop(0)
         else:
             break        
@@ -137,7 +145,7 @@ def tr_send_msg(id, clock, latency, last_message_id):
     #print("saimo IRRAAAA")
     #print("")
 
-    while clock[0] < 100:
+    while sent_counter[0] < 5:
         sent_counter[0] += 1
         text = f"Msg {sent_counter} do P {id}"
         clock[0] += 1
@@ -148,6 +156,16 @@ def tr_send_msg(id, clock, latency, last_message_id):
             pkt = message(tipe=0, message_id=message_id, timestamp=clock[0], src_process=id, dst_process=pid, text=text)
             sock.sendto(bytes(pkt), (host, port))
             time.sleep(latency)
+    
+    if id != 4:
+        while not done:
+            continue
+    else:
+        input("")
+        for pid, (host, port) in process.items():
+            pkt = message(tipe=3, message_id=[0], timestamp=clock[0], src_process=id, dst_process=pid, text="end")
+            sock.sendto(bytes(pkt), (host, port))
+        time.sleep(0.1)
             
         
         
@@ -155,6 +173,9 @@ if __name__ == "__main__":
     id = int(sys.argv[1])
     host, port = process[id]
 
+    ready = False
+    done = False
+    final_list = []
     clock = [0] 
     last_message_id = [0] 
     sent_counter = [0] 
@@ -174,3 +195,6 @@ if __name__ == "__main__":
     
     # outra thread para tratar o envio dos pacotes
     tr_send_msg(id, clock, latency, last_message_id)
+
+    for i in final_list:
+        print(i)
