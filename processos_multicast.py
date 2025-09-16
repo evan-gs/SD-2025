@@ -10,7 +10,7 @@ import threading
 class message(Packet):
     name = "Message"
     fields_desc = [
-        ByteEnumField("tipe", 0, {0:"MSG", 1:"ACK"}),
+        ByteEnumField("tipe", 0, {0:"MSG", 1:"ACK", 2:"START"}),
         IntField("message_id", 0),
         IntField("timestamp", 0),
         IntField("src_process", 0),
@@ -93,8 +93,15 @@ def deal_with_msg(msg, id, clock, msg_queue, ack_queue, last_message_id, sock):
                 current_acks = ack_queue[key]
                 msg_queue.append((clock[0], msg.message_id, None, id, None, current_acks))
                 msg_queue.sort(key=lambda x: (x[0], x[1]))
+    
+    elif msg.tipe == 2 and msg.dst_process == id:
+        ready = True
+        print("Comecando...")
+        print("")
+        print("")
             
     while len(msg_queue) > 0:
+        print("")
         print(f"-> Fila atual em <<P{id}>>: {[ (timestamp, message_id, src, dst, text, list(acks)) for timestamp, message_id, src, dst, text, acks in msg_queue ]}")
         timestamp, message_id, src, dst, text, acks = msg_queue[0]
         if len(acks) == num_process:  
@@ -114,8 +121,23 @@ def tr_receive_msg(id, port, clock, msg_queue, ack_queue, last_message_id):
 
 def tr_send_msg(id, clock, latency, last_message_id):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    while True:
-        text = input("")
+
+    if id != 4:
+        while not ready:
+            time.sleep(0.1)
+    else:
+        input("")
+        for pid, (host, port) in process.items():
+            pkt = message(tipe=2, message_id=[0], timestamp=clock[0], src_process=id, dst_process=pid, text="begin")
+            sock.sendto(bytes(pkt), (host, port))
+        time.sleep(0.1)
+    
+    print("saimo IRRAAAA")
+    print("")
+
+    while clock[0] < 21:
+        sent_counter[0] += 1
+        text = f"Msg {sent_counter} do P {id}"
         clock[0] += 1
         last_message_id[0] += 1
         message_id = last_message_id[0]
@@ -131,8 +153,10 @@ if __name__ == "__main__":
     id = int(sys.argv[1])
     host, port = process[id]
 
+    ready = False
     clock = [0] 
     last_message_id = [0] 
+    sent_counter = [0] 
     msg_queue = []
     ack_queue = {}
     
