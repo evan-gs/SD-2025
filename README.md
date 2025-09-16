@@ -1,4 +1,6 @@
-# Projeto feito por Gabriel Evangelista Gonçalves da Silva - RA 802791 e Gabriel Andrade - RA 815407
+# Projeto feito por 
+ - Gabriel Evangelista Gonçalves da Silva - RA 802791
+ - Gabriel Andrade - RA 815407
 
 ### Multicast Totalmente Ordenado
 Sistema de multicast com ordenação total entre múltiplos processos.
