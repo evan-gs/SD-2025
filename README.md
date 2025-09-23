@@ -3,7 +3,7 @@
  - Gabriel Andrade - RA 815407
 
 ### Multicast Totalmente Ordenado
-Sistema de multicast com ordenação total entre múltiplos processos.
+Sistema de exclusão mútua entre múltiplos processos para utilização de recursos.
 
 ### Pré-requisitos
 Python 3.11.x
@@ -17,27 +17,18 @@ Abra 4 terminais e execute em cada um:
 
 ```bash
 # Terminal 1
-python3 processos_multicast.py 1
+python3 exclusao_mutua.py 1
 
 # Terminal 2
-python3 processos_multicast.py 2
+python3 exclusao_mutua.py 2
 
 # Terminal 3
-python3 processos_multicast.py 3
+python3 exclusao_mutua.py 3
 
 # Terminal 4
-python3 processos_multicast.py 4
+python3 exclusao_mutua.py 4
 ```
 
-### Execução com Latência
-
-```bash
-# Processo 1 com latência de 0.5 segundos
-python3 processos_multicast.py 1 0.5
-
-# Processo 2 com latência de 1 segundo
-python3 processos_multicast.py 2 1
-```
-
-### Uso
-Digite mensagens em qualquer processo e pressione Enter.
+Os recursos serão liberados conforme o clock de cada processo, no código atual a ordem para os processos serias:
+- Recurso 1: P1, P3, P2, P4, P1, P3 
+- Recurso 2: P2, P4, P1, P3, P2, P4 
