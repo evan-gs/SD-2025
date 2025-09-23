@@ -40,20 +40,23 @@ process = {
 
 num_process = len(process)
 
-def deal_with_msg(msg, id, process_up, sock):   
+def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok):   
     if isinstance(msg, heartbeat):
         if msg.tipe == 0: 
             pkt = heartbeat(tipe=1, src_process=id, dst_process=msg.src_process)  
             sock.sendto(bytes(pkt), process[msg.src_process])
+            process_up[msg.src_process] = True
+            received_heartbeat_ok[msg.src_process] = True
         elif msg.tipe == 1: 
             process_up[msg.src_process] = True
+            received_heartbeat_ok[msg.src_process] = True
 
     elif isinstance(msg, message):
         # sua parte aqui Evan
         i = 0
     
 
-def tr_receive_msg(id, port, process_up):
+def tr_receive_msg(id, port, process_up, received_heartbeat_ok):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", port))
     while True:
@@ -63,7 +66,7 @@ def tr_receive_msg(id, port, process_up):
             pkt = message(data)
         else:            # pacote Heartbeat
             pkt = heartbeat(data)
-        deal_with_msg(pkt, id, process_up, sock)
+        deal_with_msg(pkt, id, process_up, sock, received_heartbeat_ok)
 
 def tr_send_msg(id, process_up):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -77,7 +80,7 @@ def tr_send_msg(id, process_up):
     #        pkt = message(tipe=0, src_process=id, dst_process=pid)
     #        sock.sendto(bytes(pkt), (host, port))
 
-def tr_send_heartbeat(id, process_up):
+def tr_send_heartbeat(id, process_up, received_heartbeat_ok):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     for pid in process_up:
@@ -85,10 +88,15 @@ def tr_send_heartbeat(id, process_up):
             host, port = process[pid]
             pkt = heartbeat(tipe=0, src_process=id, dst_process=pid)
             sock.sendto(bytes(pkt), (host, port))
-                
+
     time.sleep(5)
            
     while True:
+        for pid in received_heartbeat_ok:
+            if not received_heartbeat_ok[pid]:
+                process_up[pid] = False
+            received_heartbeat_ok[pid] = False
+            
         print(Style.BRIGHT + "### Status dos processos ###" + Style.RESET_ALL)
         for pid in process_up:
             if process_up[pid]:
@@ -110,14 +118,15 @@ if __name__ == "__main__":
     host, port = process[id]
 
     process_up = {pid: False for pid in range(1, num_process + 1) if pid != id}          
+    received_heartbeat_ok = {pid: False for pid in range(1, num_process + 1) if pid != id}          
     
     print(f"Processo: <<P{id}>> rodando em {host}:{port}")
     
     # uma thread para tratar o recebimento dos pacotes
-    threading.Thread(target=tr_receive_msg, args=(id, port, process_up), daemon=True).start()
+    threading.Thread(target=tr_receive_msg, args=(id, port, process_up, received_heartbeat_ok), daemon=True).start()
     
     # uma thread para tratar o envio dos heartbeats
-    threading.Thread(target=tr_send_heartbeat, args=(id, process_up), daemon=True).start()
+    threading.Thread(target=tr_send_heartbeat, args=(id, process_up, received_heartbeat_ok), daemon=True).start()
 
     # outra thread para tratar o envio dos pacotes
     tr_send_msg(id, process_up)
