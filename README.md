@@ -2,7 +2,7 @@
  - Gabriel Evangelista Gonçalves da Silva - RA 802791
  - Gabriel Andrade - RA 815407
 
-### Multicast Totalmente Ordenado
+### Sistema de Exclusão Mútua
 Sistema de exclusão mútua entre múltiplos processos para utilização de recursos.
 
 ### Pré-requisitos
@@ -29,6 +29,8 @@ python3 exclusao_mutua.py 3
 python3 exclusao_mutua.py 4
 ```
 
-Os recursos serão liberados conforme o clock de cada processo, no código atual a ordem para os processos serias:
+Os recursos serão liberados conforme o clock de cada processo, no código atual a ordem para os processos seriam:
 - Recurso 1: P1, P3, P2, P4, P1, P3 
 - Recurso 2: P2, P4, P1, P3, P2, P4 
+ 
+-> Vale notar que essa ordem se dá caso a ordem de execução dos processo seja 1,2,3 e 4 respectivamente

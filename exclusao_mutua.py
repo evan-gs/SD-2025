@@ -31,9 +31,9 @@ process = {
 # Dicionário dos processos com os recursos a serem requisitados
 req_per_process = {
     1: [1,2,1], #[1,2,1] 
-    2: [1,2,1], #[2,1,2]
+    2: [2,1,2], #[2,1,2]
     3: [1,2,1], #[1,2,1]
-    4: [1,2,1]  #[2,1,2]
+    4: [2,1,2]  #[2,1,2]
 }
 
 num_process = len(process)
