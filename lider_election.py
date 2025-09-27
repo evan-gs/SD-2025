@@ -75,7 +75,7 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
 
             #pra ver se ele recebeu resposta
             was_bullied = False
-            for i in range(10)
+            for i in range(10):
                 if was_bullied:
                     break
                 for pid in received_election_ok:
