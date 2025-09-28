@@ -57,11 +57,6 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
 
     elif isinstance(msg, message):
         if msg.tipe == 0:
-            #LEADER MORREU
-            process_up[leader] = False
-            received_heartbeat_ok[leader] = False
-            leader = 0
-
             #primeiro manda o ack pra acabar a participação do processo q iniciou a eleição
             pkt = message(tipe=1, src_process=id, dst_process=msg.src_process)
             sock.sendto(bytes(pkt), process[msg.src_process])
@@ -92,6 +87,7 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
                         host, port = process[pid]
                         pkt = message(tipe=2, src_process=id, dst_process=pid)
                         sock.sendto(bytes(pkt), process[msg.src_process])
+                print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{id}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
 
             #reseta a variavel para futuras eleicoes
             for pid in received_election_ok:
@@ -100,14 +96,14 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
             
         elif msg.tipe == 1:
             #só regristra o ack pra usar no processo de eleição
-            received_heartbeat_ok[pid] = True
+            received_heartbeat_ok[msg.src_process] = True
             received_election_ok[msg.src_process] = True
 
         elif msg.tipe == 2:
             #só salva o novo lider
             leader = msg.src_process
-            received_heartbeat_ok[pid] = True
-            print(Fore.BLUE + Style.BRIGHT + f"\n-> <<P{msg.src_process} é o líder supremo>> <-\n" + Style.RESET_ALL)
+            received_heartbeat_ok[msg.src_process] = True
+            print(Fore.BLUE + Style.BRIGHT + f"\n-> <<P{leader} é o líder supremo>> <-\n" + Style.RESET_ALL)
     
 
 def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_election_ok, leader):
@@ -131,15 +127,26 @@ def tr_send_msg(id, process_up):
     # Resposta: Acho que saber pelo process up é meio "cheat?" ele só deveria reiniciar a eleição quando é reanimado
     
     #se o processo reanimou, ele volta a pedir eleição
+    print(Fore.BLUE + Style.BRIGHT + f"\n-> <<DIRETAS JÁ>> <-\n" + Style.RESET_ALL)
+    is_lowest = True
     for pid in process_up:
         if pid < id and process_up[pid]:
             host, port = process[pid]
             pkt = message(tipe=0, src_process=id, dst_process=pid)
             sock.sendto(bytes(pkt), (host, port))
+            is_lowest = False
 
-    print(Fore.BLUE + Style.BRIGHT + f"\n-> <<DIRETAS JÁ>> <-\n" + Style.RESET_ALL)
+    if is_lowest:
+        for pid in process_up:
+            host, port = process[pid]
+            pkt = message(tipe=2, src_process=id, dst_process=pid)
+            sock.sendto(bytes(pkt), (host, port))
+        leader = id
+        print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{id}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
 
-def tr_send_heartbeat(id, process_up, received_heartbeat_ok):
+    time.sleep(60)
+
+def tr_send_heartbeat(id, process_up, received_heartbeat_ok, leader):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     for pid in process_up:
@@ -154,6 +161,9 @@ def tr_send_heartbeat(id, process_up, received_heartbeat_ok):
         for pid in received_heartbeat_ok:
             if not received_heartbeat_ok[pid]:
                 process_up[pid] = False
+                if pid == leader:
+                    print(Fore.BLUE + Style.BRIGHT + f"\n-> <<O LIDER MORREU!!!!!!!>> <-\n" + Style.RESET_ALL)
+                    leader = 0
             received_heartbeat_ok[pid] = False
             
         print(Style.BRIGHT + "### Status dos processos ###" + Style.RESET_ALL)
@@ -187,7 +197,7 @@ if __name__ == "__main__":
     threading.Thread(target=tr_receive_msg, args=(id, port, process_up, received_heartbeat_ok, received_election_ok, leader), daemon=True).start()
     
     # uma thread para tratar o envio dos heartbeats
-    threading.Thread(target=tr_send_heartbeat, args=(id, process_up, received_heartbeat_ok), daemon=True).start()
+    threading.Thread(target=tr_send_heartbeat, args=(id, process_up, received_heartbeat_ok, leader), daemon=True).start()
 
     # outra thread para tratar o envio dos pacotes
     tr_send_msg(id, process_up)
