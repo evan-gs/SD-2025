@@ -100,11 +100,14 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
             
         elif msg.tipe == 1:
             #só regristra o ack pra usar no processo de eleição
+            received_heartbeat_ok[pid] = True
             received_election_ok[msg.src_process] = True
 
         elif msg.tipe == 2:
             #só salva o novo lider
             leader = msg.src_process
+            received_heartbeat_ok[pid] = True
+            print(Fore.BLUE + Style.BRIGHT + f"\n-> <<P{msg.src_process} é o líder supremo>> <-\n" + Style.RESET_ALL)
     
 
 def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_election_ok, leader):
@@ -122,14 +125,19 @@ def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_electio
 def tr_send_msg(id, process_up):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<P{id}>> <-\n" + Style.RESET_ALL)
-    time.sleep(60)
+    time.sleep(6)
     # Envia uma mensagem para o cordenador se não responder ele está morto e precisa iniciar uma eleição
     # !!! Pergunta: Ele tem que enviar a mensagem para o cordenador mesmo? Ele não consegue saber pelo process_up?
+    # Resposta: Acho que saber pelo process up é meio "cheat?" ele só deveria reiniciar a eleição quando é reanimado
     
-    #for pid, (host, port) in process.items():
-    #    if pid != id:
-    #        pkt = message(tipe=0, src_process=id, dst_process=pid)
-    #        sock.sendto(bytes(pkt), (host, port))
+    #se o processo reanimou, ele volta a pedir eleição
+    for pid in process_up:
+        if pid < id and process_up[pid]:
+            host, port = process[pid]
+            pkt = message(tipe=0, src_process=id, dst_process=pid)
+            sock.sendto(bytes(pkt), (host, port))
+
+    print(Fore.BLUE + Style.BRIGHT + f"\n-> <<DIRETAS JÁ>> <-\n" + Style.RESET_ALL)
 
 def tr_send_heartbeat(id, process_up, received_heartbeat_ok):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
