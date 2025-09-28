@@ -57,7 +57,7 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
             received_heartbeat_ok[msg.src_process] = True
 
     elif isinstance(msg, message):
-        if msg.tipe == 0:
+        if msg.tipe == 0 and not election_happening:
             election_happening = True
             #primeiro manda o ack pra acabar a participação do processo q iniciou a eleição
             pkt = message(tipe=1, src_process=id, dst_process=msg.src_process)
