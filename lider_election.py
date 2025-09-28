@@ -81,13 +81,13 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
 
             #caso nenhum menor tenha respondido, ele vira o lider e avisa todo mundo viv
             if not was_bullied:
-                leader = id
+                leader[0] = id
                 for pid in process_up:
                     if process_up[pid]:
                         host, port = process[pid]
                         pkt = message(tipe=2, src_process=id, dst_process=pid)
                         sock.sendto(bytes(pkt), process[msg.src_process])
-                print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{id}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
+                print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
 
             #reseta a variavel para futuras eleicoes
             for pid in received_election_ok:
@@ -101,9 +101,9 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
 
         elif msg.tipe == 2:
             #só salva o novo lider
-            leader = msg.src_process
+            leader[0] = msg.src_process
             received_heartbeat_ok[msg.src_process] = True
-            print(Fore.BLUE + Style.BRIGHT + f"\n-> <<P{leader} é o líder supremo>> <-\n" + Style.RESET_ALL)
+            print(Fore.BLUE + Style.BRIGHT + f"\n-> <<P{leader[0]} é o líder supremo>> <-\n" + Style.RESET_ALL)
     
 
 def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_election_ok, leader):
@@ -118,7 +118,7 @@ def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_electio
             pkt = heartbeat(data)
         deal_with_msg(pkt, id, process_up, sock, received_heartbeat_ok, received_election_ok, leader)
 
-def tr_send_msg(id, process_up):
+def tr_send_msg(id, process_up, leader):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<P{id}>> <-\n" + Style.RESET_ALL)
     time.sleep(6)
@@ -141,8 +141,8 @@ def tr_send_msg(id, process_up):
             host, port = process[pid]
             pkt = message(tipe=2, src_process=id, dst_process=pid)
             sock.sendto(bytes(pkt), (host, port))
-        leader = id
-        print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{id}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
+        leader[0] = id
+        print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
 
     time.sleep(60)
 
@@ -158,12 +158,13 @@ def tr_send_heartbeat(id, process_up, received_heartbeat_ok, leader):
     time.sleep(5)
            
     while True:
+        #print(leader[0])
         for pid in received_heartbeat_ok:
             if not received_heartbeat_ok[pid]:
                 process_up[pid] = False
-                if pid == leader:
+                if pid == leader[0]:
                     print(Fore.BLUE + Style.BRIGHT + f"\n-> <<O LIDER MORREU!!!!!!!>> <-\n" + Style.RESET_ALL)
-                    leader = 0
+                    leader[0] = 0
             received_heartbeat_ok[pid] = False
             
         print(Style.BRIGHT + "### Status dos processos ###" + Style.RESET_ALL)
@@ -189,7 +190,8 @@ if __name__ == "__main__":
     process_up = {pid: False for pid in range(1, num_process + 1) if pid != id}          
     received_heartbeat_ok = {pid: False for pid in range(1, num_process + 1) if pid != id}
     received_election_ok = {pid: False for pid in range(1, num_process + 1) if pid != id}
-    leader = 0 #todo processo deve saber quem é o lider, variavel = 0 quando n sabe        
+    leader = [0] #todo processo deve saber quem é o lider, variavel = 0 quando n sabe 
+    leader[0] = 0       
     
     print(f"Processo: <<P{id}>> rodando em {host}:{port}")
     
@@ -200,4 +202,4 @@ if __name__ == "__main__":
     threading.Thread(target=tr_send_heartbeat, args=(id, process_up, received_heartbeat_ok, leader), daemon=True).start()
 
     # outra thread para tratar o envio dos pacotes
-    tr_send_msg(id, process_up)
+    tr_send_msg(id, process_up, leader)
