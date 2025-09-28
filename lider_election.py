@@ -107,7 +107,7 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
             leader = msg.src_process
     
 
-def tr_receive_msg(id, port, process_up, received_heartbeat_ok):
+def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_election_ok, leader):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", port))
     while True:
@@ -117,7 +117,7 @@ def tr_receive_msg(id, port, process_up, received_heartbeat_ok):
             pkt = message(data)
         else:            # pacote Heartbeat
             pkt = heartbeat(data)
-        deal_with_msg(pkt, id, process_up, sock, received_heartbeat_ok)
+        deal_with_msg(pkt, id, process_up, sock, received_heartbeat_ok, received_election_ok, leader)
 
 def tr_send_msg(id, process_up):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
