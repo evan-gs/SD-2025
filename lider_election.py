@@ -40,7 +40,7 @@ process = {
 
 num_process = len(process)
 
-def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_election_ok, leader):   
+def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_election_ok, leader, election_happening):   
     if isinstance(msg, heartbeat):
         if msg.tipe == 0: 
             #avisa que é o leader se o processo tava morto
@@ -58,6 +58,7 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
 
     elif isinstance(msg, message):
         if msg.tipe == 0:
+            election_happening = True
             #primeiro manda o ack pra acabar a participação do processo q iniciou a eleição
             pkt = message(tipe=1, src_process=id, dst_process=msg.src_process)
             sock.sendto(bytes(pkt), process[msg.src_process])
@@ -89,6 +90,7 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
                         pkt = message(tipe=2, src_process=id, dst_process=pid)
                         sock.sendto(bytes(pkt), process[msg.src_process])
                 print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
+                election_happening = False
 
             #reseta a variavel para futuras eleicoes
             for pid in received_election_ok:
@@ -106,9 +108,10 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
             process_up[msg.src_process] = True
             received_heartbeat_ok[msg.src_process] = True
             print(Fore.BLUE + Style.BRIGHT + f"\n-> <<P{leader[0]} é o líder supremo>> <-\n" + Style.RESET_ALL)
+            election_happening = False
     
 
-def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_election_ok, leader):
+def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_election_ok, leader, election_happening):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", port))
     while True:
@@ -118,9 +121,9 @@ def tr_receive_msg(id, port, process_up, received_heartbeat_ok, received_electio
             pkt = message(data)
         else:            # pacote Heartbeat
             pkt = heartbeat(data)
-        deal_with_msg(pkt, id, process_up, sock, received_heartbeat_ok, received_election_ok, leader)
+        deal_with_msg(pkt, id, process_up, sock, received_heartbeat_ok, received_election_ok, leader, election_happening)
 
-def tr_send_msg(id, process_up, leader):
+def tr_send_msg(id, process_up, leader, election_happening):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<P{id}>> <-\n" + Style.RESET_ALL)
     time.sleep(6)
@@ -129,26 +132,28 @@ def tr_send_msg(id, process_up, leader):
     # Resposta: Acho que saber pelo process up é meio "cheat?" ele só deveria reiniciar a eleição quando é reanimado
     
     #se o processo reanimou, ele volta a pedir eleição
-    print(Fore.BLUE + Style.BRIGHT + f"\n-> <<DIRETAS JÁ>> <-\n" + Style.RESET_ALL)
-    is_lowest = True
-    for pid in process_up:
-        if pid < id and process_up[pid]:
-            host, port = process[pid]
-            pkt = message(tipe=0, src_process=id, dst_process=pid)
-            sock.sendto(bytes(pkt), (host, port))
-            is_lowest = False
-
-    if is_lowest:
+    if not election_happening:
+        print(Fore.BLUE + Style.BRIGHT + f"\n-> <<DIRETAS JÁ>> <-\n" + Style.RESET_ALL)
+        is_lowest = True
         for pid in process_up:
-            host, port = process[pid]
-            pkt = message(tipe=2, src_process=id, dst_process=pid)
-            sock.sendto(bytes(pkt), (host, port))
-        leader[0] = id
-        print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
+            if pid < id and process_up[pid]:
+                host, port = process[pid]
+                pkt = message(tipe=0, src_process=id, dst_process=pid)
+                sock.sendto(bytes(pkt), (host, port))
+                is_lowest = False
+
+        if is_lowest:
+            for pid in process_up:
+                host, port = process[pid]
+                pkt = message(tipe=2, src_process=id, dst_process=pid)
+                sock.sendto(bytes(pkt), (host, port))
+            leader[0] = id
+            print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
+            election_happening = False
     
     #se o lider desapareceu pra ele, ele volta a pedir eleição
     while True:
-        if leader[0] == 0:
+        if leader[0] == 0 and not election_happening:
             print(Fore.BLUE + Style.BRIGHT + f"\n-> <<DIRETAS JÁ>> <-\n" + Style.RESET_ALL)
             is_lowest = True
             for pid in process_up:
@@ -167,7 +172,7 @@ def tr_send_msg(id, process_up, leader):
                 print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
         time.sleep(5)
 
-def tr_send_heartbeat(id, process_up, received_heartbeat_ok, leader):
+def tr_send_heartbeat(id, process_up, received_heartbeat_ok, leader, election_happening):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     for pid in process_up:
@@ -212,15 +217,16 @@ if __name__ == "__main__":
     received_heartbeat_ok = {pid: False for pid in range(1, num_process + 1) if pid != id}
     received_election_ok = {pid: False for pid in range(1, num_process + 1) if pid != id}
     leader = [0] #todo processo deve saber quem é o lider, variavel = 0 quando n sabe 
-    leader[0] = 0       
+    leader[0] = 0
+    election_happening = False
     
     print(f"Processo: <<P{id}>> rodando em {host}:{port}")
     
     # uma thread para tratar o recebimento dos pacotes
-    threading.Thread(target=tr_receive_msg, args=(id, port, process_up, received_heartbeat_ok, received_election_ok, leader), daemon=True).start()
+    threading.Thread(target=tr_receive_msg, args=(id, port, process_up, received_heartbeat_ok, received_election_ok, leader, election_happening), daemon=True).start()
     
     # uma thread para tratar o envio dos heartbeats
-    threading.Thread(target=tr_send_heartbeat, args=(id, process_up, received_heartbeat_ok, leader), daemon=True).start()
+    threading.Thread(target=tr_send_heartbeat, args=(id, process_up, received_heartbeat_ok, leader, election_happening), daemon=True).start()
 
     # outra thread para tratar o envio dos pacotes
-    tr_send_msg(id, process_up, leader)
+    tr_send_msg(id, process_up, leader, election_happening)
