@@ -43,14 +43,15 @@ num_process = len(process)
 def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_election_ok, leader):   
     if isinstance(msg, heartbeat):
         if msg.tipe == 0: 
-            pkt = heartbeat(tipe=1, src_process=id, dst_process=msg.src_process)  
-            sock.sendto(bytes(pkt), process[msg.src_process])
+            #avisa que é o leader se o processo tava morto
+            if leader[0] == id and not process_up[msg.src_process]:
+                pkt = message(tipe=2, src_process=id, dst_process=msg.src_process)  
+                sock.sendto(bytes(pkt), process[msg.src_process])
+            else:
+                pkt = heartbeat(tipe=1, src_process=id, dst_process=msg.src_process)  
+                sock.sendto(bytes(pkt), process[msg.src_process])
             process_up[msg.src_process] = True
             received_heartbeat_ok[msg.src_process] = True
-            #avisa que é o leader
-            #if leader == id:
-                #pkt = message(tipe=2, src_process=id, dst_process=msg.src_process)  
-                #sock.sendto(bytes(pkt), process[msg.src_process])
         elif msg.tipe == 1: 
             process_up[msg.src_process] = True
             received_heartbeat_ok[msg.src_process] = True
@@ -102,6 +103,7 @@ def deal_with_msg(msg, id, process_up, sock, received_heartbeat_ok, received_ele
         elif msg.tipe == 2:
             #só salva o novo lider
             leader[0] = msg.src_process
+            process_up[msg.src_process] = True
             received_heartbeat_ok[msg.src_process] = True
             print(Fore.BLUE + Style.BRIGHT + f"\n-> <<P{leader[0]} é o líder supremo>> <-\n" + Style.RESET_ALL)
     
@@ -143,8 +145,27 @@ def tr_send_msg(id, process_up, leader):
             sock.sendto(bytes(pkt), (host, port))
         leader[0] = id
         print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
+    
+    #se o lider desapareceu pra ele, ele volta a pedir eleição
+    while True:
+        if leader[0] == 0:
+            print(Fore.BLUE + Style.BRIGHT + f"\n-> <<DIRETAS JÁ>> <-\n" + Style.RESET_ALL)
+            is_lowest = True
+            for pid in process_up:
+                if pid < id and process_up[pid]:
+                    host, port = process[pid]
+                    pkt = message(tipe=0, src_process=id, dst_process=pid)
+                    sock.sendto(bytes(pkt), (host, port))
+                    is_lowest = False
 
-    time.sleep(60)
+            if is_lowest:
+                for pid in process_up:
+                    host, port = process[pid]
+                    pkt = message(tipe=2, src_process=id, dst_process=pid)
+                    sock.sendto(bytes(pkt), (host, port))
+                leader[0] = id
+                print(Fore.BLUE + Style.BRIGHT + f"\n-> <<EU, P{leader[0]}, sou o líder supremo>> <-\n" + Style.RESET_ALL)
+        time.sleep(5)
 
 def tr_send_heartbeat(id, process_up, received_heartbeat_ok, leader):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -163,7 +184,7 @@ def tr_send_heartbeat(id, process_up, received_heartbeat_ok, leader):
             if not received_heartbeat_ok[pid]:
                 process_up[pid] = False
                 if pid == leader[0]:
-                    print(Fore.BLUE + Style.BRIGHT + f"\n-> <<O LIDER MORREU!!!!!!!>> <-\n" + Style.RESET_ALL)
+                    #print(Fore.BLUE + Style.BRIGHT + f"\n-> <<O LIDER MORREU!!!!!!!>> <-\n" + Style.RESET_ALL)
                     leader[0] = 0
             received_heartbeat_ok[pid] = False
             
