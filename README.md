@@ -2,42 +2,72 @@
  - Gabriel Evangelista Gonçalves da Silva - RA 802791
  - Gabriel Andrade - RA 815407
 
-### Multicast Totalmente Ordenado
-Sistema de multicast com ordenação total entre múltiplos processos.
+### Eleição de Líder em Redes sem Fio
 
 ### Pré-requisitos
 Python 3.11.x
 
 Scapy (pip install scapy)
+Colorama (pip install colorama)
 
 ### Como Executar
-Execução Básica (4 processos)
+Execução Básica (11 processos)
 
-Abra 4 terminais e execute em cada um:
+Abra 1- terminais e execute em cada um:
 
 ```bash
 # Terminal 1
-python3 processos_multicast.py 1
+python3 wireless_leader.py 1
 
 # Terminal 2
-python3 processos_multicast.py 2
+python3 wireless_leader.py 2
 
 # Terminal 3
-python3 processos_multicast.py 3
+python3 wireless_leader.py 3
 
 # Terminal 4
-python3 processos_multicast.py 4
+python3 wireless_leader.py 4
+
+# Terminal 5
+python3 wireless_leader.py 5
+
+# Terminal 6
+python3 wireless_leader.py 6
+
+# Terminal 7
+python3 wireless_leader.py 7
+
+# Terminal 8
+python3 wireless_leader.py 8
+
+# Terminal 9
+python3 wireless_leader.py 9
+
+# Terminal 10
+python3 wireless_leader.py 10
+
+# Terminal 11
+python3 graph_manager
+
 ```
 
-### Execução com Latência
-
+Insira as conexões entre cada nó pelo terminal do graph manager, primeiro descrevendo a capacidade de cada nó e depois suas conexões como x y em cada linha, e digite q para encerrar a descrição do grafo
+Exemplo abaixo descreve o grafo presente nos slides:
 ```bash
-# Processo 1 com latência de 0.5 segundos
-python3 processos_multicast.py 1 0.5
+4 6 3 2 1 4 2 8 5 4
+1 2
+1 10
+2 3
+2 7
+3 4
+3 5
+4 5
+4 6
+5 6
+5 7
+6 9
+7 8
+7 10
+8 9
 
-# Processo 2 com latência de 1 segundo
-python3 processos_multicast.py 2 1
 ```
-
-### Uso
-Digite mensagens em qualquer processo e pressione Enter.
