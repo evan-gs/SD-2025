@@ -38,6 +38,8 @@ def send_msg():
 
     while True:
         try:
+            for pid in node_connections:
+                node_connections[pid].clear()
             print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<DIGITE EM UMA LINHA AS NOVAS CAPACIDADES, CASO QUEIRA MUDAR O GRAFO>> <-\n" + Style.RESET_ALL)
             capacity = input("")
             for pid in range(1, 10):
@@ -60,8 +62,8 @@ def send_msg():
             for pid in process:
                 #Prepara os dados para envio
                 msg_connections = " ".join(node_connections[pid])
-                print(node_capacity[pid])
-                print(msg_connections)
+                #print(node_capacity[pid])
+                #print(msg_connections)
 
                 host, port = process[pid]
                 pkt = graph(tipe=0, dst_process=pid, capacity=node_capacity[pid], connections=msg_connections)

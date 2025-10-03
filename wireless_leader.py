@@ -52,10 +52,11 @@ def deal_with_msg(msg, id, sock, leader, election_happening, connections, capaci
     if isinstance(msg, graph):
         if msg.tipe == 0: 
             print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<NOVO GRAFO>> <-\n" + Style.RESET_ALL)
-            connections = []
+            connections.clear()
             str_connections = msg.connections.split()
             for node in str_connections:
                 connections.append(int(node))
+            connections = sorted(set(connections))
             capacity[0] = msg.capacity
             print(connections)
             print(capacity)
@@ -88,7 +89,6 @@ def tr_send_msg(id, leader, election_happening, connections, capacity):
         host, port = process[pid]
         pkt = message(tipe=0, src_process=id, dst_process=pid)
         sock.sendto(bytes(pkt), (host, port))
-        is_lowest = False
 
 if __name__ == "__main__":
     id = int(sys.argv[1])
