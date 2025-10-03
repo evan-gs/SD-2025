@@ -51,15 +51,20 @@ num_process = len(process)
 def deal_with_msg(msg, id, sock, leader, election_happening, connections, capacity):   
     if isinstance(msg, graph):
         if msg.tipe == 0: 
+            # recebe nova topologia, mas apenas as informações que ele deve ter acesso (nós adjacentes e sua capacidade)
             print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<NOVO GRAFO>> <-\n" + Style.RESET_ALL)
-            connections.clear()
+            connections.clear() #reseta toda vez antes de salvar nova topologia
             str_connections = msg.connections.split()
             for node in str_connections:
                 connections.append(int(node))
-            connections = sorted(set(connections))
+            connections = sorted(set(connections)) #ordena e retira duplicatas, evitando input ruim no graphmanager.py
             capacity[0] = msg.capacity
-            print(connections)
-            print(capacity)
+            #print(connections)
+            #print(capacity)
+
+            # !!!MAIS IMPORTANTE!!!
+            # string de conexões é tratada aqui pra ser salva na lista connections de inteiros ordenados.
+            # !!!MAIS IMPORTANTE!!!
     elif isinstance(msg, message):
         pass
 
@@ -86,9 +91,12 @@ def tr_send_msg(id, leader, election_happening, connections, capacity):
         print(Fore.RED + Style.BRIGHT + f"\n-> <<ENTER PARA INICIAR UMA ELEIÇÃO>> <-\n" + Style.RESET_ALL)
         input("")
 
-        host, port = process[pid]
-        pkt = message(tipe=0, src_process=id, dst_process=pid)
-        sock.sendto(bytes(pkt), (host, port))
+        # Sem estrutura de início de envio ainda. Tava pensando que deixa um input pra definir quando um processo pediria eleição seria interessante, já que processos não devem morrer aqui
+        # PS: estrutura inicial do pacote de mensagem tá feito lá encima
+
+        #host, port = process[pid]
+        #pkt = message(tipe=0, src_process=id, dst_process=pid)
+        #sock.sendto(bytes(pkt), (host, port))
 
 if __name__ == "__main__":
     id = int(sys.argv[1])

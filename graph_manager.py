@@ -36,6 +36,7 @@ num_process = len(process)
 def send_msg():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+    # Cada iteração aqui é uma topologia diferente. Podemos ficar mudando em tempo real nos processos, embora não haja failsafe ainda se fizermos isso no meio de uma eleição
     while True:
         try:
             for pid in node_connections:
@@ -49,7 +50,7 @@ def send_msg():
             node_capacity[10] = int(capacity)
 
             print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<DIGITE, POR LINHA, CADA CONEXÃO DO GRAFO. DIGITE 'q' PARA ENVIAR>> <-\n" + Style.RESET_ALL)
-            while (connection := input("")) != "q": #possivelmente botar um regex pra evitar coisas diferentes de dois inteiros
+            while (connection := input("")) != "q":
                 first_node, second_node = connection.split()
                 a = int(first_node)
                 b = int(second_node)
@@ -65,11 +66,16 @@ def send_msg():
                 #print(node_capacity[pid])
                 #print(msg_connections)
 
+                # !!!MAIS IMPORTANTE!!!
+                # envia a capacidade como um inteiro, conexões como uma string a ser tratada
+                # !!!MAIS IMPORTANTE!!!
                 host, port = process[pid]
                 pkt = graph(tipe=0, dst_process=pid, capacity=node_capacity[pid], connections=msg_connections)
                 sock.sendto(bytes(pkt), (host, port))
         except ValueError:
-            print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<ERRO! INSIRA CORRETAMENTE OS VALORES>> <-\n" + Style.RESET_ALL)
+            print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<ERRO! INSIRA CORRETAMENTE OS VALORES (NÚMEROS INTEIROS)>> <-\n" + Style.RESET_ALL)
+        except KeyError:
+            print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<ERRO! INSIRA CONEXÕES POSSÍVEIS NOS 10 NÓS (APENAS VALORES DE 1 A 10)>> <-\n" + Style.RESET_ALL)
     
 
 if __name__ == "__main__":
