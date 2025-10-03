@@ -37,34 +37,37 @@ def send_msg():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     while True:
-        print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<DIGITE EM UMA LINHA AS NOVAS CAPACIDADES, CASO QUEIRA MUDAR O GRAFO>> <-\n" + Style.RESET_ALL)
-        capacity = input("")
-        for pid in range(1, 10):
-            first_node, second_node = capacity.split(" ", 1)
-            node_capacity[pid] = int(first_node)
-            capacity = second_node
-        node_capacity[10] = int(capacity)
+        try:
+            print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<DIGITE EM UMA LINHA AS NOVAS CAPACIDADES, CASO QUEIRA MUDAR O GRAFO>> <-\n" + Style.RESET_ALL)
+            capacity = input("")
+            for pid in range(1, 10):
+                first_node, second_node = capacity.split(" ", 1)
+                node_capacity[pid] = int(first_node)
+                capacity = second_node
+            node_capacity[10] = int(capacity)
 
-        print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<DIGITE, POR LINHA, CADA CONEXÃO DO GRAFO. DIGITE 'q' PARA ENVIAR>> <-\n" + Style.RESET_ALL)
-        while (connection := input("")) != "q":
-            first_node, second_node = connection.split()
-            a = int(first_node)
-            b = int(second_node)
+            print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<DIGITE, POR LINHA, CADA CONEXÃO DO GRAFO. DIGITE 'q' PARA ENVIAR>> <-\n" + Style.RESET_ALL)
+            while (connection := input("")) != "q": #possivelmente botar um regex pra evitar coisas diferentes de dois inteiros
+                first_node, second_node = connection.split()
+                a = int(first_node)
+                b = int(second_node)
 
-            node_connections[a].append(second_node)
-            node_connections[b].append(first_node)
+                node_connections[a].append(second_node)
+                node_connections[b].append(first_node)
 
-        print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<CONEXÕES INSERIDAS>> <-\n" + Style.RESET_ALL)
-        
-        for pid in process:
-            #Prepara os dados para envio
-            msg_connections = " ".join(node_connections[pid])
-            #print(node_capacity[pid])
-            #print(msg_connections)
+            print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<CONEXÕES INSERIDAS>> <-\n" + Style.RESET_ALL)
+            
+            for pid in process:
+                #Prepara os dados para envio
+                msg_connections = " ".join(node_connections[pid])
+                print(node_capacity[pid])
+                print(msg_connections)
 
-            host, port = process[pid]
-            pkt = graph(tipe=0, dst_process=pid, capacity=node_capacity[pid], connections=msg_connections)
-            sock.sendto(bytes(pkt), (host, port))
+                host, port = process[pid]
+                pkt = graph(tipe=0, dst_process=pid, capacity=node_capacity[pid], connections=msg_connections)
+                sock.sendto(bytes(pkt), (host, port))
+        except ValueError:
+            print(Fore.YELLOW + Style.BRIGHT + f"\n-> <<ERRO! INSIRA CORRETAMENTE OS VALORES>> <-\n" + Style.RESET_ALL)
     
 
 if __name__ == "__main__":
