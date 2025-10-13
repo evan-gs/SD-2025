@@ -57,6 +57,7 @@ class ElectionState:
         self.connections = []
         self.capacity = 0
         self.id = 0
+        self.delay_time = 0  # Novo campo para delay opcional
 
 def handle_election_message(msg, id, sock, election_state):
     initiator = msg.election_initiator
@@ -113,9 +114,24 @@ def handle_election_message(msg, id, sock, election_state):
         send_ok_message(id, sock, election_state, election_state.current_election['received_from'])
         election_state.current_election = None
     else:
-        # Encaminha eleição para todos os vizinhos
-        for neighbor in election_state.current_election['pending_replies']:
-            send_election_message(id, sock, neighbor, initiator, current_lowest_process, current_highest_capacity)
+        # DELAY OPICIONAL: Aplica delay apenas se ativado por argumento
+        if election_state.delay_time > 0:
+            print(Fore.YELLOW + f"P{id}: Aguardando {election_state.delay_time} segundos antes de propagar eleição..." + Style.RESET_ALL)
+            
+            # Cria uma thread para enviar as mensagens após o delay
+            def delayed_propagation():
+                time.sleep(election_state.delay_time)
+                if (election_state.current_election is not None and 
+                    election_state.current_election['initiator'] == initiator):
+                    print(Fore.YELLOW + f"P{id}: Propagando eleição após delay de {election_state.delay_time}s" + Style.RESET_ALL)
+                    for neighbor in election_state.current_election['pending_replies']:
+                        send_election_message(id, sock, neighbor, initiator, current_lowest_process, current_highest_capacity)
+            
+            threading.Thread(target=delayed_propagation, daemon=True).start()
+        else:
+            # Sem delay - propaga imediatamente
+            for neighbor in election_state.current_election['pending_replies']:
+                send_election_message(id, sock, neighbor, initiator, current_lowest_process, current_highest_capacity)
 
 def handle_ok_message(msg, id, sock, election_state):
     initiator = msg.election_initiator
@@ -331,13 +347,35 @@ def tr_send_msg(id, election_state):
             send_election_message(id, sock, neighbor, id, id, election_state.capacity)
 
 if __name__ == "__main__":
+    # Processa argumentos
+    delay_time = 0
+    
+    # Verifica se há argumento de delay
+    if "-d" in sys.argv:
+        try:
+            delay_idx = sys.argv.index("-d")
+            delay_time = float(sys.argv[delay_idx + 1])
+            # Remove o argumento -d e seu valor
+            sys.argv.pop(delay_idx)
+            sys.argv.pop(delay_idx)
+        except (ValueError, IndexError):
+            print(Fore.RED + "Erro: Argumento -d deve ser seguido por um número (segundos)" + Style.RESET_ALL)
+            sys.exit(1)
+    
     id = int(sys.argv[1])
     host, port = process[id]
     
     election_state = ElectionState()
     election_state.id = id
+    election_state.delay_time = delay_time  # Novo campo para armazenar o delay
     
     print(f"Processo: P{id} rodando em {host}:{port}")
+    
+    # Informa sobre o modo de delay
+    if delay_time > 0:
+        print(Fore.YELLOW + f"MODO DELAY: Propagação com delay de {delay_time} segundos" + Style.RESET_ALL)
+    else:
+        print(Fore.GREEN + "MODO NORMAL: Propagação imediata" + Style.RESET_ALL)
     
     # Thread para receber mensagens
     threading.Thread(target=tr_receive_msg, args=(id, port, election_state), daemon=True).start()
