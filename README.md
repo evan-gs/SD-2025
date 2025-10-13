@@ -50,6 +50,16 @@ python3 wireless_leader.py 10
 python3 graph_manager
 
 ```
+### Versão de execução com delay
+
+```bash
+# 
+python3 wireless_leader.py -d <delay> <1-10>
+
+exemplo -> python3 wireless_leader.py -d 3 1
+
+```
+Assim o processo 1 enviará mensagens para os seus vizinhos após 3 segundos nas eleições
 
 Insira as conexões entre cada nó pelo terminal do graph manager, primeiro descrevendo a capacidade de cada nó e depois suas conexões como x y em cada linha, e digite q para encerrar a descrição do grafo
 Exemplo abaixo descreve o grafo presente nos slides:
