@@ -57,8 +57,8 @@ class ElectionState:
         self.connections = []
         self.capacity = 0
         self.id = 0
-        self.delay_time = 0  # Novo campo para delay opcional
-
+        self.delay_time = 0  
+        
 def handle_election_message(msg, id, sock, election_state):
     initiator = msg.election_initiator
     current_lowest_process = msg.lowest_process
@@ -114,7 +114,6 @@ def handle_election_message(msg, id, sock, election_state):
         send_ok_message(id, sock, election_state, election_state.current_election['received_from'])
         election_state.current_election = None
     else:
-        # DELAY OPICIONAL: Aplica delay apenas se ativado por argumento
         if election_state.delay_time > 0:
             print(Fore.YELLOW + f"P{id}: Aguardando {election_state.delay_time} segundos antes de propagar eleição..." + Style.RESET_ALL)
             
@@ -129,7 +128,6 @@ def handle_election_message(msg, id, sock, election_state):
             
             threading.Thread(target=delayed_propagation, daemon=True).start()
         else:
-            # Sem delay - propaga imediatamente
             for neighbor in election_state.current_election['pending_replies']:
                 send_election_message(id, sock, neighbor, initiator, current_lowest_process, current_highest_capacity)
 
