@@ -53,8 +53,7 @@ python3 graph_manager
 ### Versão de execução com delay
 
 ```bash
-# 
-python3 wireless_leader.py -d <delay> <1-10>
+python3 wireless_leader.py -d <delay> <1 - 10>
 
 exemplo -> python3 wireless_leader.py -d 3 1
 
