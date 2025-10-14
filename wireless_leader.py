@@ -135,7 +135,7 @@ def handle_ok_message(msg, id, sock, election_state):
     initiator = msg.election_initiator
     sender = msg.src_process
 
-    # Se não estamos participando de uma eleição ou a eleição não é a mesma, ignora
+    # Se não estamos participando de uma eleição ou a eleição não é a mesma - IGNORA
     if election_state.current_election is None or election_state.current_election['initiator'] != initiator:
         print(Fore.RED + f"P{id}: OK de P{sender} ignorado - Não participando desta eleição" + Style.RESET_ALL)
         return
@@ -143,13 +143,13 @@ def handle_ok_message(msg, id, sock, election_state):
     print(Fore.BLUE + f"P{id}: Recebeu OK de P{sender} para eleição de P{initiator}" + Style.RESET_ALL)
     print(Fore.CYAN + f"P{id}: Maior nó recebido: P{msg.lowest_process} (Capacidade: {msg.highest_capacity})" + Style.RESET_ALL)
 
+    # Verifica se este nó que mandou ok tem capacidade maior que a atual
     if msg.highest_capacity > election_state.current_election['highest_capacity']:
         election_state.current_election['lowest_process'] = msg.lowest_process
         election_state.current_election['highest_capacity'] = msg.highest_capacity
         print(Fore.GREEN + f"P{id}: Atualizando maior nó global para P{msg.lowest_process} (Capacidade maior: {msg.highest_capacity})" + Style.RESET_ALL)
-    
-    elif (msg.highest_capacity == election_state.current_election['highest_capacity'] and 
-          msg.lowest_process < election_state.current_election['lowest_process']):
+    # Em caso de empate na capacidade, usa o ID menor como critério de desempate
+    elif (msg.highest_capacity == election_state.current_election['highest_capacity'] and msg.lowest_process < election_state.current_election['lowest_process']):
         election_state.current_election['lowest_process'] = msg.lowest_process
         election_state.current_election['highest_capacity'] = msg.highest_capacity
         print(Fore.GREEN + f"P{id}: Atualizando maior nó global para P{msg.lowest_process} (Mesma capacidade, ID menor)" + Style.RESET_ALL)
@@ -231,7 +231,8 @@ def handle_allhail_message(msg, id, sock, election_state):
         if neighbor != sender:  # Evita enviar de volta para quem enviou primeiro
             send_allhail_message(id, sock, neighbor, leader)
             print(Fore.MAGENTA + f"P{id}: Propagando ALLHAIL para P{neighbor}" + Style.RESET_ALL)
-
+            
+# Funções de envio de mensagens
 def send_election_message(id, sock, dst, initiator, lowest_process, highest_capacity):
     host, port = process[dst]
     pkt = message(tipe=0, src_process=id, dst_process=dst, 
@@ -249,6 +250,13 @@ def send_ok_message(id, sock, election_state, dst):
     sock.sendto(bytes(pkt), (host, port))
     print(Fore.CYAN + f"P{id}: Enviando OK para P{dst} com P{election_state.current_election['lowest_process']}" + Style.RESET_ALL)
 
+def send_allhail_message(id, sock, dst, leader):
+    host, port = process[dst]
+    pkt = message(tipe=2, src_process=id, dst_process=dst,
+                 lowest_process=leader, highest_capacity=0,
+                 election_initiator=0)
+    sock.sendto(bytes(pkt), (host, port))
+    
 def send_ignored_message(id, sock, dst, initiator):
     host, port = process[dst]
     pkt = message(tipe=3, src_process=id, dst_process=dst,
@@ -256,13 +264,6 @@ def send_ignored_message(id, sock, dst, initiator):
                  election_initiator=initiator)
     sock.sendto(bytes(pkt), (host, port))
     print(Fore.RED + f"P{id}: Enviando IGNORED para P{dst}" + Style.RESET_ALL)
-
-def send_allhail_message(id, sock, dst, leader):
-    host, port = process[dst]
-    pkt = message(tipe=2, src_process=id, dst_process=dst,
-                 lowest_process=leader, highest_capacity=0,
-                 election_initiator=0)
-    sock.sendto(bytes(pkt), (host, port))
 
 def deal_with_msg(msg, id, sock, election_state):
     if isinstance(msg, graph):
